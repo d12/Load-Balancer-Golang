@@ -4,12 +4,15 @@ import (
     "fmt"
     "net/http"
     "net/url"
-    "log"
     "io/ioutil"
     "bytes"
     "io"
     "strings"
 )
+
+type Proxy struct {
+  hostOrigin string
+}
 
 var servers = []Server {
     Server {
@@ -26,7 +29,7 @@ var servers = []Server {
     },
 }
 
-func chooseServer() Server {
+func (proxy Proxy)chooseServer() Server {
   var min = -1
   var minIndex = 0
   for index,server := range servers {
@@ -43,7 +46,7 @@ func chooseServer() Server {
   return servers[minIndex]
 }
 
-func ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
+func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
   u, err := url.Parse(server.Url() + r.RequestURI)
   fmt.Println("GOT REQUEST: " + r.RequestURI);
   if err != nil {
@@ -52,7 +55,7 @@ func ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
 
   r.URL = u
   r.Header.Set("X-Forwarded-Host", r.Host)
-  r.Header.Set("Origin", "http://localhost:9090")
+  r.Header.Set("Origin", proxy.hostOrigin)
   r.Host = server.Url()
   r.RequestURI = ""
 
@@ -73,7 +76,7 @@ func ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
   bodyBytes, err := ioutil.ReadAll(resp.Body)
   if err != nil {
     fmt.Println(w, "Failed to read response body")
-    http.notFound(w, r)
+    http.NotFound(w, r)
     return
   }
 
@@ -90,22 +93,14 @@ func ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
   defer resp.Body.Close()
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-    var server = chooseServer()
+func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
+    var server = proxy.chooseServer()
 
     server.connections += 1
 
-    ReverseProxy(w, r, server)
+    proxy.ReverseProxy(w, r, server)
 
     server.connections -= 1
 
     fmt.Println("Served a request")
-}
-
-func main() {
-    http.HandleFunc("/", handler)
-    err := http.ListenAndServe(":9090", nil)
-    if err != nil {
-        fmt.Print("ListenAndServe: ", err)
-    }
 }
