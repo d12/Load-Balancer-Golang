@@ -11,7 +11,7 @@ import (
 )
 
 type Proxy struct {
-  hostOrigin string
+  HostOrigin string
 }
 
 var servers = []Server {
@@ -55,7 +55,7 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
 
   r.URL = u
   r.Header.Set("X-Forwarded-Host", r.Host)
-  r.Header.Set("Origin", proxy.hostOrigin)
+  r.Header.Set("Origin", proxy.HostOrigin)
   r.Host = server.Url()
   r.RequestURI = ""
 

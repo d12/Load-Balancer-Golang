@@ -3,16 +3,23 @@ package main
 import (
     "fmt"
     "net/http"
-    //"gopkg.in/yaml.v2"
+    "log"
 )
 
-var proxy = Proxy {
-  hostOrigin: "http://localhost:9090",
-}
+
 
 func main() {
+    config, err := readConfig()
+    if err != nil {
+      log.Fatal(err)
+    }
+
+    var proxy = Proxy {
+      HostOrigin: config.HostOrigin,
+    }
+
     http.HandleFunc("/", proxy.handler)
-    err := http.ListenAndServe(":9090", nil)
+    err = http.ListenAndServe(":9090", nil)
     if err != nil {
         fmt.Print("ListenAndServe: ", err)
     }
