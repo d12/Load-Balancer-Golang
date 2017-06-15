@@ -7,23 +7,26 @@ import (
 )
 
 type Config struct {
-  HostOrigin string
+  Host string
+  Port int
 }
 
 const configName string = "config.yml"
 
 func (config Config) hasRequiredFields() bool {
-  return (config.HostOrigin != "")
+  return (config.Host != "") && (config.Port != 0)
 }
 
 func readConfig() (Config, error) {
   config := Config{}
 
+  fmt.Println("Config: Reading file...")
   file, err := ioutil.ReadFile(configName)
   if err != nil {
     return config, err
   }
 
+  fmt.Println("Config: File read successful, parsing yaml...")
   err = yaml.Unmarshal(file, &config)
   if err != nil {
     return config, err
@@ -34,6 +37,7 @@ func readConfig() (Config, error) {
     return config, fmt.Errorf("Missing required fields in config")
   }
 
+  fmt.Println("Config: All good!")
+
   return config, nil
 }
-// TODO: Pass in host and port, not full name

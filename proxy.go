@@ -8,10 +8,17 @@ import (
     "bytes"
     "io"
     "strings"
+    "strconv"
 )
 
 type Proxy struct {
-  HostOrigin string
+  Host string
+  Port int
+}
+
+// TODO: Optional ports, different schemes
+func (proxy Proxy) origin() string {
+  return ("http://" + proxy.Host + ":" + strconv.Itoa(proxy.Port));
 }
 
 var servers = []Server {
@@ -47,17 +54,22 @@ func (proxy Proxy)chooseServer() Server {
 }
 
 func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
+  fmt.Println("Proxy: Parsing URL...")
   u, err := url.Parse(server.Url() + r.RequestURI)
-  fmt.Println("GOT REQUEST: " + r.RequestURI);
   if err != nil {
       panic(err)
   }
 
+  fmt.Println("Proxy: Requested resource: " + r.RequestURI)
+  fmt.Println("Proxy: Re-assigning request headers...")
+
   r.URL = u
   r.Header.Set("X-Forwarded-Host", r.Host)
-  r.Header.Set("Origin", proxy.HostOrigin)
+  r.Header.Set("Origin", proxy.origin())
   r.Host = server.Url()
   r.RequestURI = ""
+
+  fmt.Println("Proxy: Headers re-assigned. Sending new request to web server...")
 
   client := &http.Client{
     CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -68,23 +80,31 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
   resp, err := client.Do(r)
   if err != nil {
     fmt.Println(err)
-    fmt.Println(w, "Internal server error sorry")
+    fmt.Println(w, "Proxy: Internal server error sorry")
     http.NotFound(w, r)
     return
   }
 
+  fmt.Println("Proxy: Request successful, recieved response.")
+  fmt.Println("Proxy: Parsing response...")
+
   bodyBytes, err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    fmt.Println(w, "Failed to read response body")
+    fmt.Println(w, "Proxy: Failed to read response body")
     http.NotFound(w, r)
     return
   }
 
   buffer := bytes.NewBuffer(bodyBytes)
 
+  fmt.Println("Proxy: Response parsed.")
+  fmt.Println("Proxy: Rewriting response headers for client...")
+
   for k, v := range resp.Header {
     w.Header().Set(k, strings.Join(v, ";"))
   }
+
+  fmt.Println("Proxy: Headers rewritten. Sending response back to client...")
 
   w.WriteHeader(resp.StatusCode)
   fmt.Println(resp.StatusCode)
@@ -94,6 +114,7 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
 }
 
 func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Proxy: Recieved a request, assigning a web server...");
     var server = proxy.chooseServer()
 
     server.connections += 1
@@ -102,5 +123,5 @@ func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
 
     server.connections -= 1
 
-    fmt.Println("Served a request")
+    fmt.Println("Proxy: Responded to request successfuly!")
 }
