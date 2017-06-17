@@ -23,9 +23,10 @@ func (proxy Proxy) origin() string {
 }
 
 // TODO: This crashes if we define no servers in our config
-func (proxy Proxy)chooseServer() Server {
+func (proxy Proxy)chooseServer() *Server {
   var min = -1
   var minIndex = 0
+  fmt.Println("Proxy: Choosing a server...")
   for index,server := range proxy.Servers {
     var conn = server.Connections
     if min == -1 {
@@ -37,12 +38,13 @@ func (proxy Proxy)chooseServer() Server {
     }
   }
 
-  return proxy.Servers[minIndex]
+  fmt.Println("Proxy: Chose server: " + strconv.Itoa(minIndex))
+
+  return &proxy.Servers[minIndex]
 }
 
 func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
-  fmt.Println("Proxy: Parsing URL...")
-  fmt.Println("Url: " + server.Url())
+  fmt.Println("Proxy: Parsing URL: " + server.Url())
   u, err := url.Parse(server.Url() + r.RequestURI)
   if err != nil {
       panic(err)
@@ -107,7 +109,7 @@ func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
 
     server.Connections += 1
 
-    proxy.ReverseProxy(w, r, server)
+    proxy.ReverseProxy(w, r, *server)
 
     server.Connections -= 1
 
