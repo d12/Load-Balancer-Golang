@@ -14,6 +14,7 @@ import (
 type Proxy struct {
   Host string
   Port int
+  Servers []Server
 }
 
 // TODO: Optional ports, different schemes
@@ -21,26 +22,12 @@ func (proxy Proxy) origin() string {
   return ("http://" + proxy.Host + ":" + strconv.Itoa(proxy.Port));
 }
 
-var servers = []Server {
-    Server {
-        name: "server A",
-        scheme: "http",
-        host: "localhost",
-        port: "3000",
-    },
-    Server {
-        name: "server B",
-        scheme: "http",
-        host: "localhost",
-        port: "3000",
-    },
-}
-
+// TODO: This crashes if we define no servers in our config
 func (proxy Proxy)chooseServer() Server {
   var min = -1
   var minIndex = 0
-  for index,server := range servers {
-    var conn = server.connections
+  for index,server := range proxy.Servers {
+    var conn = server.Connections
     if min == -1 {
       min = conn
       minIndex = index
@@ -50,11 +37,12 @@ func (proxy Proxy)chooseServer() Server {
     }
   }
 
-  return servers[minIndex]
+  return proxy.Servers[minIndex]
 }
 
 func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
   fmt.Println("Proxy: Parsing URL...")
+  fmt.Println("Url: " + server.Url())
   u, err := url.Parse(server.Url() + r.RequestURI)
   if err != nil {
       panic(err)
@@ -117,11 +105,11 @@ func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Proxy: Recieved a request, assigning a web server...");
     var server = proxy.chooseServer()
 
-    server.connections += 1
+    server.Connections += 1
 
     proxy.ReverseProxy(w, r, server)
 
-    server.connections -= 1
+    server.Connections -= 1
 
     fmt.Println("Proxy: Responded to request successfuly!")
 }

@@ -1,13 +1,13 @@
 package main
 
 type Server struct {
-    name string
-    scheme string
-    host string
-    port string
-    connections int
+    Name string
+    Scheme string
+    Host string
+    Port string
+    Connections int
 }
 
 func (server Server) Url() string {
-  return server.scheme + "://" + server.host + ":" + server.port;
+  return server.Scheme + "://" + server.Host + ":" + server.Port;
 }
