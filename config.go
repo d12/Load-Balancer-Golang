@@ -6,38 +6,33 @@ import (
   "gopkg.in/yaml.v2"
 )
 
-type Config struct {
-  Host string
-  Port int
-}
-
 const configName string = "config.yml"
 
-func (config Config) hasRequiredFields() bool {
-  return (config.Host != "") && (config.Port != 0)
+func (proxy Proxy) hasRequiredFields() bool {
+  return (proxy.Host != "") && (proxy.Port != 0)
 }
 
-func readConfig() (Config, error) {
-  config := Config{}
+func readConfig() (Proxy, error) {
+  proxy := Proxy{}
 
   fmt.Println("Config: Reading file...")
   file, err := ioutil.ReadFile(configName)
   if err != nil {
-    return config, err
+    return proxy, err
   }
 
   fmt.Println("Config: File read successful, parsing yaml...")
-  err = yaml.Unmarshal(file, &config)
+  err = yaml.Unmarshal(file, &proxy)
   if err != nil {
-    return config, err
+    return proxy, err
   }
 
-  if !config.hasRequiredFields() {
+  if !proxy.hasRequiredFields() {
     // TODO: The error should say what fields are missing
-    return config, fmt.Errorf("Missing required fields in config")
+    return proxy, fmt.Errorf("Missing required fields in config")
   }
 
   fmt.Println("Config: All good!")
 
-  return config, nil
+  return proxy, nil
 }
