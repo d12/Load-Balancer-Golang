@@ -8,9 +8,9 @@ import (
 func main() {
     LogInfo("Spinning up load balancer...")
     LogInfo("Reading Config.yml...")
-    proxy, err := readConfig()
+    proxy, err := ReadConfig()
     if err != nil {
-      LogErr("Failed to read config.yml")
+      LogErr("An error occurred while trying to parse config.yml")
       LogErrAndCrash(err.Error())
     }
 
