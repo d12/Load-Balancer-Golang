@@ -1,7 +1,6 @@
 package main
 
 import (
-    "fmt"
     "net/http"
     "net/url"
     "io/ioutil"
@@ -26,7 +25,6 @@ func (proxy Proxy) origin() string {
 func (proxy Proxy)chooseServer() *Server {
   var min = -1
   var minIndex = 0
-  fmt.Println("Proxy: Choosing a server...")
   for index,server := range proxy.Servers {
     var conn = server.Connections
     if min == -1 {
@@ -38,20 +36,14 @@ func (proxy Proxy)chooseServer() *Server {
     }
   }
 
-  fmt.Println("Proxy: Chose server: " + strconv.Itoa(minIndex))
-
   return &proxy.Servers[minIndex]
 }
 
 func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
-  fmt.Println("Proxy: Parsing URL: " + server.Url())
   u, err := url.Parse(server.Url() + r.RequestURI)
   if err != nil {
-      panic(err)
+      LogErrAndCrash(err.Error())
   }
-
-  fmt.Println("Proxy: Requested resource: " + r.RequestURI)
-  fmt.Println("Proxy: Re-assigning request headers...")
 
   r.URL = u
   r.Header.Set("X-Forwarded-Host", r.Host)
@@ -59,7 +51,6 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
   r.Host = server.Url()
   r.RequestURI = ""
 
-  fmt.Println("Proxy: Headers re-assigned. Sending new request to web server...")
 
   client := &http.Client{
     CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -67,45 +58,40 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
     },
   }
 
+  // TODO: If the server doesn't respond, try a new web server
+  // We could return a status code from this function and let the handler try passing the request to a new server.
   resp, err := client.Do(r)
   if err != nil {
-    fmt.Println(err)
-    fmt.Println(w, "Proxy: Internal server error sorry")
+    // For now, this is a fatal error
+    // When we can fail to another webserver, this should only be a warning.
+    LogErr(err.Error())
     http.NotFound(w, r)
     return
   }
-
-  fmt.Println("Proxy: Request successful, recieved response.")
-  fmt.Println("Proxy: Parsing response...")
+  LogInfo("Recieved response: " + strconv.Itoa(resp.StatusCode))
 
   bodyBytes, err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    fmt.Println(w, "Proxy: Failed to read response body")
+    LogErr("Proxy: Failed to read response body")
     http.NotFound(w, r)
     return
   }
 
   buffer := bytes.NewBuffer(bodyBytes)
-
-  fmt.Println("Proxy: Response parsed.")
-  fmt.Println("Proxy: Rewriting response headers for client...")
-
   for k, v := range resp.Header {
     w.Header().Set(k, strings.Join(v, ";"))
   }
 
-  fmt.Println("Proxy: Headers rewritten. Sending response back to client...")
-
   w.WriteHeader(resp.StatusCode)
-  fmt.Println(resp.StatusCode)
 
   io.Copy(w, buffer)
   defer resp.Body.Close()
 }
 
 func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("Proxy: Recieved a request, assigning a web server...");
     var server = proxy.chooseServer()
+    LogInfo("Got request: " + r.RequestURI)
+    LogInfo("Sending to server: " + server.Name)
 
     server.Connections += 1
 
@@ -113,5 +99,5 @@ func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
 
     server.Connections -= 1
 
-    fmt.Println("Proxy: Responded to request successfuly!")
+    LogInfo("Responded to request successfuly")
 }

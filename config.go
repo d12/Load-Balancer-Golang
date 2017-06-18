@@ -15,13 +15,11 @@ func (proxy Proxy) hasRequiredFields() bool {
 func readConfig() (Proxy, error) {
   proxy := Proxy{}
 
-  fmt.Println("Config: Reading file...")
   file, err := ioutil.ReadFile(configName)
   if err != nil {
     return proxy, err
   }
 
-  fmt.Println("Config: File read successful, parsing yaml...")
   err = yaml.Unmarshal(file, &proxy)
   if err != nil {
     return proxy, err
@@ -31,8 +29,6 @@ func readConfig() (Proxy, error) {
     // TODO: The error should say what fields are missing
     return proxy, fmt.Errorf("Missing required fields in config")
   }
-
-  fmt.Println("Config: All good!")
 
   return proxy, nil
 }

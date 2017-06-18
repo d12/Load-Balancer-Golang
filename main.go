@@ -1,25 +1,23 @@
 package main
 
 import (
-    "fmt"
     "net/http"
-    "log"
     "strconv"
 )
 
 func main() {
-    fmt.Println("Main: Spinning up load balancer...")
-    fmt.Println("Main: Reading Config.yml...")
+    LogInfo("Spinning up load balancer...")
+    LogInfo("Reading Config.yml...")
     proxy, err := readConfig()
     if err != nil {
-      log.Fatal(err)
+      LogErr("Failed to read config.yml")
+      LogErrAndCrash(err.Error())
     }
 
-    fmt.Println("Main: Forwarding requests to proxy...")
-    fmt.Println("Main: Listening to requests on port: " + strconv.Itoa(proxy.Port))
+    LogInfo("Listening to requests on port: " + strconv.Itoa(proxy.Port))
     http.HandleFunc("/", proxy.handler)
     err = http.ListenAndServe(":" + strconv.Itoa(proxy.Port), nil)
     if err != nil {
-        log.Fatal(err)
+        LogErrAndCrash(err.Error())
     }
 }

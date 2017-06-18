@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "time"
+  "os"
 )
 
 // HH/mm/SS DD/MM/YYYY
@@ -23,6 +24,11 @@ func LogErr(msg string) {
   printTime()
   fmt.Print("[ERROR] ")
   fmt.Println(msg)
+}
+
+func LogErrAndCrash(msg string) {
+  LogErr(msg)
+  os.Exit(1)
 }
 
 func printTime() {
