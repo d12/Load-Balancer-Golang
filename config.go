@@ -9,44 +9,44 @@ import (
 
 const configName string = "config.yml"
 
-func (proxy Proxy) validateHost() (bool, string) {
-  if proxy.Host == "" {
-    return true, "the 'host' field cannot be blank!"
+func validation(condition bool, errorMessage string) string {
+  if condition {
+    return errorMessage
   } else {
-    return false, ""
+    return ""
   }
 }
 
-func (proxy Proxy) validatePort() (bool, string) {
-  if proxy.Port == 0 {
-    return true, "the 'port' field cannot be blank!"
-  } else {
-    return false, ""
-  }
-}
-
-func (proxy Proxy) validateServers() (bool, string) {
-  if len(proxy.Servers) == 0 {
-    return true, "the config must specify at least 1 server"
-  } else {
-    return false, ""
-  }
-}
-
-func (proxy Proxy) validateFields() error {
-  var errors = []string{}
-  var validations = [](func() (bool, string)){
-    proxy.validateHost,
-    proxy.validatePort,
-    proxy.validateServers,
-  }
-
-  for _, validation := range validations {
-    has_error, error_message := validation()
-    if has_error {
-      errors = append(errors, error_message)
+func removeEmpty(errors []string) []string {
+  var filtered = []string{}
+  for _,e := range errors {
+    if e != "" {
+      filtered = append(filtered, e)
     }
   }
+
+  return filtered
+}
+
+func generateValidationErrors(proxy Proxy) []string {
+  return removeEmpty([]string{
+    validation(
+      proxy.Host == "",
+      "the 'host' field cannot be blank",
+    ),
+    validation(
+      proxy.Port == 0,
+      "the 'port' field cannot be blank",
+    ),
+    validation(
+      len(proxy.Servers) == 0,
+      "the config must specify at least 1 server",
+    ),
+  })
+}
+
+func validateFields(proxy Proxy) error {
+  var errors = generateValidationErrors(proxy)
 
   if(len(errors) == 0) {
     return nil
@@ -55,7 +55,7 @@ func (proxy Proxy) validateFields() error {
   }
 }
 
-func readConfig() (Proxy, error) {
+func ReadConfig() (Proxy, error) {
   proxy := Proxy{}
 
   file, err := ioutil.ReadFile(configName)
@@ -68,7 +68,7 @@ func readConfig() (Proxy, error) {
     return proxy, err
   }
 
-  err = proxy.validateFields()
+  err = validateFields(proxy)
   if err != nil {
     return proxy, err
   }
