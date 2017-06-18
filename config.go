@@ -9,7 +9,7 @@ import (
 const configName string = "config.yml"
 
 func (proxy Proxy) hasRequiredFields() bool {
-  return (proxy.Host != "") && (proxy.Port != 0)
+  return (proxy.Host != "") && (proxy.Port != 0) && (len(proxy.Servers) != 0)
 }
 
 func readConfig() (Proxy, error) {
