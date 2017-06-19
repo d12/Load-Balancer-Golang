@@ -13,12 +13,12 @@ import (
 type Proxy struct {
   Host string
   Port int
+  Scheme string
   Servers []Server
 }
 
-// TODO: Optional ports, different schemes
 func (proxy Proxy) origin() string {
-  return ("http://" + proxy.Host + ":" + strconv.Itoa(proxy.Port));
+  return (proxy.Scheme + "://" + proxy.Host + ":" + strconv.Itoa(proxy.Port));
 }
 
 // TODO: This crashes if we define no servers in our config

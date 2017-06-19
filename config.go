@@ -42,6 +42,10 @@ func generateValidationErrors(proxy Proxy) []string {
       len(proxy.Servers) == 0,
       "the config must specify at least 1 server",
     ),
+    validation(
+      proxy.Scheme != "http" && proxy.Scheme != "https",
+      "the proxy scheme must be either 'http' or 'https'",
+    ),
   })
 }
 
@@ -52,6 +56,16 @@ func validateFields(proxy Proxy) error {
     return nil
   } else {
     return fmt.Errorf(strings.Join(errors, ", "))
+  }
+}
+
+func setDefaultValues(proxy *Proxy) {
+  if proxy.Port == 0 {
+    proxy.Port = 80
+  }
+
+  if proxy.Scheme == "" {
+    proxy.Scheme = "http"
   }
 }
 
@@ -67,6 +81,8 @@ func ReadConfig() (Proxy, error) {
   if err != nil {
     return proxy, err
   }
+
+  setDefaultValues(&proxy)
 
   err = validateFields(proxy)
   if err != nil {
