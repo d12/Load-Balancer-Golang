@@ -42,6 +42,10 @@ func generateValidationErrors(proxy Proxy) []string {
       len(proxy.Servers) == 0,
       "the config must specify at least 1 server",
     ),
+    validation(
+      proxy.Scheme != "http" && proxy.Scheme != "https",
+      "the proxy scheme must be either 'http' or 'https'",
+    ),
   })
 }
 
