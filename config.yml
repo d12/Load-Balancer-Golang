@@ -1,6 +1,5 @@
 ---
 host: localhost
-port: 8081
 scheme: 'http'
 servers:
   - name: Server A

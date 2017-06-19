@@ -59,6 +59,16 @@ func validateFields(proxy Proxy) error {
   }
 }
 
+func setDefaultValues(proxy *Proxy) {
+  if proxy.Port == 0 {
+    proxy.Port = 80
+  }
+
+  if proxy.Scheme == "" {
+    proxy.Scheme = "http"
+  }
+}
+
 func ReadConfig() (Proxy, error) {
   proxy := Proxy{}
 
@@ -71,6 +81,8 @@ func ReadConfig() (Proxy, error) {
   if err != nil {
     return proxy, err
   }
+
+  setDefaultValues(&proxy)
 
   err = validateFields(proxy)
   if err != nil {
