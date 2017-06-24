@@ -14,10 +14,11 @@ func main() {
       LogErrAndCrash(err.Error())
     }
 
-    LogInfo("Listening to requests on port: " + strconv.Itoa(proxy.Port))
     http.HandleFunc("/", proxy.handler)
     err = http.ListenAndServe(":" + strconv.Itoa(proxy.Port), nil)
     if err != nil {
-        LogErrAndCrash(err.Error())
+        LogErr("Failed to bind to port " + strconv.Itoa(proxy.Port))
+        LogErrAndCrash("Make sure the port is available and not reserved")
     }
+    LogInfo("Listening to requests on port: " + strconv.Itoa(proxy.Port))
 }
