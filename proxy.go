@@ -8,6 +8,7 @@ import (
     "io"
     "strings"
     "strconv"
+    "math"
 )
 
 type Proxy struct {
@@ -22,10 +23,22 @@ func (proxy Proxy) origin() string {
 }
 
 // TODO: This crashes if we define no servers in our config
-func (proxy Proxy)chooseServer() *Server {
+func (proxy Proxy)chooseServer(ignoreList []string) *Server {
   var min = -1
   var minIndex = 0
   for index,server := range proxy.Servers {
+    var skip = false
+    for _, ignore := range ignoreList {
+      if(ignore == server.Name){
+        skip = true
+        break
+      }
+    }
+
+    if skip {
+      continue
+    }
+
     var conn = server.Connections
     if min == -1 {
       min = conn
@@ -39,7 +52,7 @@ func (proxy Proxy)chooseServer() *Server {
   return &proxy.Servers[minIndex]
 }
 
-func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) {
+func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Server) (int, error){
   u, err := url.Parse(server.Url() + r.RequestURI)
   if err != nil {
       LogErrAndCrash(err.Error())
@@ -64,9 +77,8 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
   if err != nil {
     // For now, this is a fatal error
     // When we can fail to another webserver, this should only be a warning.
-    LogErr(err.Error())
-    http.NotFound(w, r)
-    return
+    LogErr("connection refused")
+    return 0, err
   }
   LogInfo("Recieved response: " + strconv.Itoa(resp.StatusCode))
 
@@ -74,7 +86,7 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
   if err != nil {
     LogErr("Proxy: Failed to read response body")
     http.NotFound(w, r)
-    return
+    return 0, err
   }
 
   buffer := bytes.NewBuffer(bodyBytes)
@@ -85,19 +97,34 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
   w.WriteHeader(resp.StatusCode)
 
   io.Copy(w, buffer)
-  defer resp.Body.Close()
+  return resp.StatusCode, nil
 }
 
-func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
-  var server = proxy.chooseServer()
+func (proxy Proxy)attemptServers(w http.ResponseWriter, r *http.Request, ignoreList []string) {
+  if float64(len(ignoreList)) >= math.Min(float64(3), float64(len(proxy.Servers))) {
+    LogErr("Failed to find server for request")
+    http.NotFound(w, r)
+    return
+  }
+
+  var server = proxy.chooseServer(ignoreList)
   LogInfo("Got request: " + r.RequestURI)
   LogInfo("Sending to server: " + server.Name)
 
   server.Connections += 1
-
-  proxy.ReverseProxy(w, r, *server)
-
+  _, err := proxy.ReverseProxy(w, r, *server)
   server.Connections -= 1
 
+  if err != nil && strings.Contains(err.Error(), "connection refused") {
+    LogWarn("Server did not respond: " + server.Name)
+
+    proxy.attemptServers(w, r, append(ignoreList, server.Name))
+    return
+  }
+
   LogInfo("Responded to request successfuly")
+}
+
+func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
+  proxy.attemptServers(w, r, []string{})
 }
