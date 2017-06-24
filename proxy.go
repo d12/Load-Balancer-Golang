@@ -89,15 +89,15 @@ func (proxy Proxy)ReverseProxy(w http.ResponseWriter, r *http.Request, server Se
 }
 
 func (proxy Proxy)handler(w http.ResponseWriter, r *http.Request) {
-    var server = proxy.chooseServer()
-    LogInfo("Got request: " + r.RequestURI)
-    LogInfo("Sending to server: " + server.Name)
+  var server = proxy.chooseServer()
+  LogInfo("Got request: " + r.RequestURI)
+  LogInfo("Sending to server: " + server.Name)
 
-    server.Connections += 1
+  server.Connections += 1
 
-    proxy.ReverseProxy(w, r, *server)
+  proxy.ReverseProxy(w, r, *server)
 
-    server.Connections -= 1
+  server.Connections -= 1
 
-    LogInfo("Responded to request successfuly")
+  LogInfo("Responded to request successfuly")
 }
